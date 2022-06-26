@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>PHP+MySQL</title>
+    <style rel="text/css">
+        .输入框 {
+            margin-top: 20px;
+        }
+
+        #表格, tr, td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="输入框">
+    <form action='modifyRecords' method='post'>
+        <label>
+            <input type='text' placeholder='请输入修改前的学号' name='beforeStudentId'/>
+            <input type='text' placeholder='请输入修改后的学号' name='afterStudentId'/><br>
+            <button type='submit'>修改学号</button>
+        </label>
+    </form>
+</div>
+
+<div class="输入框">
+    <!--这里的action指定User类里的函数-->
+    <form action='addRecord' method='post'>
+        <label>
+            <input type='text' placeholder='姓名' name='studentName'/>
+            <input type='text' placeholder='学号' name='studentId'/><br>
+            <button type='submit'>添加</button>
+        </label>
+    </form>
+</div>
+
+<table id="表格">
+    <tr>
+        <td>id</td>
+        <td>姓名</td>
+        <td>学号</td>
+        <td>删除</td>
+    </tr>
+    {// 模板注释的写法是这样的，foreach为增强for循环，$studentArray为控制器中php文件返回的数组，as后面为值对}
+    <!--下面是内容，注意！在此HTML中，不允许有代码相关-->
+    {foreach $studentArray as $value}
+    <tr>
+        <td>{$value.id}</td>
+        <td>{$value.name}</td>
+        <td>{$value.studentID}</td>
+        <td>
+            <form action="deleteStudent" method="post">
+                {// name部分是php代码需要用的“post.删除记录”，value作为传到php中的值}
+                <button name="删除记录" value="{$value.id}">删除记录</button>
+            </form>
+        </td>
+    </tr>
+    {/foreach}
+</table>
+</body>
+</html>
