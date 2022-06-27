@@ -190,7 +190,7 @@
         }
         
         /**
-         * 修改事项内容的方法
+         * 修改事项内容
          */
         public function modificationData()
         {
@@ -232,7 +232,7 @@
         }
         
         /**
-         * 返回用户上次登录的时间和这次登录时间
+         * 返回用户上次登录的时间，以及这次登录时间
          */
         public function updateLoginTime()
         {
