@@ -190,7 +190,7 @@
         }
         
         /**
-         * 修改事项内容
+         * 修改事项内容的方法
          */
         public function modificationData()
         {
@@ -210,7 +210,7 @@
         }
         
         /**
-         * 完成所有待办事项
+         * 完成所有的待办事项
          */
         public function finishAllTodo()
         {
