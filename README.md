@@ -1,6 +1,6 @@
 ThinkPHP 6.0
 ===============
-
+[![OSCS Status](https://www.oscs1024.com/platform/badge/2690085099/php_project.svg?size=small)](https://www.oscs1024.com/project/2690085099/php_project?ref=badge_small)
 > 运行环境要求PHP7.2+，兼容PHP8.1
 
 [官方应用服务市场](https://market.topthink.com) | [`ThinkAPI`——官方统一API服务](https://docs.topthink.com/think-api)
