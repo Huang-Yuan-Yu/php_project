@@ -77,7 +77,7 @@
         }
         
         /**
-         * 测试方法
+         * 发送邮件的方法
          */
         function postEmail()
         {
@@ -108,12 +108,12 @@
                     // 添加附件
                     'addAttachment' => '',
                     // 邮件标题
-                    'Subject' => '这里是邮件标题',
+                    'Subject' => '待办事项网站 客服',
                     // 邮件内容（如果要在字符串里嵌入变量，要用双引号""来包裹，而不是单引号''）
 //                    'Body' => "<h1>这里是邮件内容</h1><p>您的验证码为：$verificationCode</p>",
                     'Body' => $emailMethods->getHtmlEmail($userEmail,$verificationCode),
                     // 如果邮件客户端不支持HTML则显示此内容
-                    'AltBody' => '如果邮件客户端不支持HTML则显示此内容',
+                    'AltBody' => "待办事项客服：尊敬的{$userEmail}客户，您好！您的验证码为：{$verificationCode}",
                 ]);
             } catch (Exception $e) {
                 exit($e);
