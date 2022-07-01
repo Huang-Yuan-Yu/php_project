@@ -4,6 +4,7 @@
     
     // 引入有关邮箱的依赖，打开CMD，在项目根目录下执行“composer require phpmailer/phpmailer”命令
     // 注意！在服务器端要单独使用composer的命令安装
+    use app\tools\EmailMethods;
     use PHPMailer\PHPMailer\Exception;
     use PHPMailer\PHPMailer\PHPMailer;
     
@@ -80,6 +81,7 @@
          */
         function postEmail()
         {
+            $emailMethods = new EmailMethods();
             $message = json_decode(file_get_contents("php://input"), true);
             $userEmail = json_decode(sprintf('"%s"', $message['email']));
             $verificationCode = json_decode(sprintf('"%s"', $message['verificationCode']));
@@ -108,7 +110,8 @@
                     // 邮件标题
                     'Subject' => '这里是邮件标题',
                     // 邮件内容（如果要在字符串里嵌入变量，要用双引号""来包裹，而不是单引号''）
-                    'Body' => "<h1>这里是邮件内容</h1><p>您的验证码为：$verificationCode</p>",
+//                    'Body' => "<h1>这里是邮件内容</h1><p>您的验证码为：$verificationCode</p>",
+                    'Body' => $emailMethods->getHtmlEmail($userEmail,$verificationCode),
                     // 如果邮件客户端不支持HTML则显示此内容
                     'AltBody' => '如果邮件客户端不支持HTML则显示此内容',
                 ]);
