@@ -1,4 +1,5 @@
 <?php
+    
     namespace app\controller;
     
     // 引入Model目录下的TodoListUser类——待办事项
@@ -30,7 +31,6 @@
             try {
                 // 返回的值：
                 $response = [];
-                
                 // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
                 // 注意！POST里存储的数据是Unicode编码，需要转码才能用
                 $user = json_decode(file_get_contents("php://input"), true);
@@ -53,47 +53,51 @@
          */
         public function login()
         {
-            // 初始结果是登录失败：
-            $response['result'] = 'failed';
-            try {
-                $user = json_decode(file_get_contents("php://input"), true);
-                $name = json_decode(sprintf('"%s"', $user['name']));
-                $password = json_decode(sprintf('"%s"', $user['password']));
-                // 查询数据库的表
-                $query = (new TodoListUser)
-                    // 两个查询条件
-                    ->where("name", $name)
-                    ->where("password", $password)
-                    ->select();
-                
-                // 用户名和密码正确，则签发Token
-                if ($name == $query[0]->name && $password == $query[0]->password) {
-                    // 获取当前时间，作为签发时间
-                    $nowTime = time();
-                    // 注意！Token里不能存放重要、敏感的内容，因为可以通过Token解析出下面的实际内容
-                    $token = [
-                        // 签发者（服务器）的地址
-                        'iss' => 'http://localhost:8000/',
-                        // 客户端地址
-                        'aud' => 'http://localhost:8080/',
-                        // 签发时间
-                        'iat' => $nowTime,
-                        // 在什么时间之后该jwt才可用
-                        'nbf' => $nowTime,
-                        // 过期时间，这里以“秒”作为单位，“+600”表示过10分钟后过期——60*10=600，604800秒等于一个星期
-                        'exp' => $nowTime + 604800,
-                    ];
-                    // 对Token进行编码，第一个参数为Token，第二个参数为加密公钥
-                    $jwt = JWT::encode($token, KEY, "HS256");
-                    // 登录成功就赋值为success
-                    $response['result'] = '登录成功';
-                    // 将编码后的Token发送给客户端
-                    $response['jwt'] = $jwt;
+            $user = json_decode(file_get_contents("php://input"), true);
+            $name = json_decode(sprintf('"%s"', $user['name']));
+            $password = json_decode(sprintf('"%s"', $user['password']));
+            
+            // 这里只是为了占位，因为返回给前端的参数可能有多个：
+            $response['result'] = "";
+            // 判断是否存在此用户，如果不存在，则直接返回信息给前端
+            if (TodoListUser::where("name", $name)->find() === null) {
+                // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
+                $response['result'] = "不存在此用户，请检查账号是否输入正确！";
+            } else {
+                try {
+                    // 查询数据库的表（两个查询条件），查找有无存在此用户，若查询不到，则会报错，要异常捕获
+                    $query = TodoListUser::where("name", $name)->where("password", $password)->select();
+                    // 用户名和密码正确，则签发Token
+                    if ($name == $query[0]->name && $password == $query[0]->password) {
+                        // 获取当前时间，作为签发时间
+                        $nowTime = time();
+                        // 注意！Token里不能存放重要、敏感的内容，因为可以通过Token解析出下面的实际内容
+                        $token = [
+                            // 签发者地址
+                            'iss' => 'http://localhost:8000/',
+                            // 客户端地址
+                            'aud' => 'http://localhost:8080/',
+                            // 签发时间
+                            'iat' => $nowTime,
+                            // 在什么时间之后该jwt才可用
+                            'nbf' => $nowTime,
+                            // 过期时间，这里以“秒”作为单位，“+600”表示过10分钟后过期——60*10=600，604800秒等于一个星期
+                            'exp' => $nowTime + 604800,
+                        ];
+                        // 对Token进行编码，第一个参数为Token，第二个参数为加密公钥
+                        $jwt = JWT::encode($token, KEY, "HS256");
+                        // 登录成功就赋值为success
+                        $response['result'] = '登录成功';
+                        // 将编码后的Token发送给客户端
+                        $response['jwt'] = $jwt;
+                    }
+                } catch (Exception $exception) {
+                    $response['msg'] = '用户名或密码错误!';
                 }
-            } catch (Exception $exception) {
-                $response['msg'] = '用户名或密码错误!';
             }
-            echo json_encode($response);
+            
+            // 最后返回一或多个属性
+            exit(json_encode($response));
         }
         
         /**
@@ -219,7 +223,7 @@
                 // 查找该用户下的所有未完成的事项，将其更新为完成
                 ->where("done", 0)->update(["done" => 1]);
         }
-    
+        
         /**
          * 取消完成所有待办事项
          */
@@ -249,7 +253,43 @@
             // 返回结果（注意！如果要返回一个对象，必须要经过JSON编码后才能传输给前端！）
             exit(json_encode($response));
         }
-    
+        
+        /**
+         * 重置密码的方法
+         */
+        public function resetPassword()
+        {
+            try {
+                // 返回的值：
+                $response = [];
+                // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
+                // 注意！POST里存储的数据是Unicode编码，需要转码才能用
+                $user = json_decode(file_get_contents("php://input"), true);
+                $userName = json_decode(sprintf('"%s"', $user['name']));
+                $userPassword = json_decode(sprintf('"%s"', $user['password']));
+                
+                // 如果不存在此用户
+                if (TodoListUser::where("name", $userName)->find() === null) {
+                    // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
+                    exit($response['message'] = "不存在此用户，请检查账号是否输入正确！");
+                }
+                // 查询结果，返回一个数组，如果里面有对象则存在此用户，为空数组则不存在
+                $query = TodoListUser::where("name", $userName)->select();
+                
+                // 先查询用户原来的密码，看新密码和旧密码是否一致，一致则提示不必修改
+                if ($query[0]->password === $userPassword) {
+                    exit($response["message"] = "新密码和旧密码一致，不必修改！");
+                } // 如果不一样
+                else {
+                    // 则查找用户并更新用户的密码
+                    TodoListUser::where("name", $userName)->update(["password" => $userPassword]);
+                    exit($response["message"] = "密码重置成功！");
+                }
+            } catch (PDOException $exception) {
+                exit($response["message"] = "密码重置失败···");
+            }
+        }
+        
         /**
          * 提供给前端，用于测试网络的连通性
          */

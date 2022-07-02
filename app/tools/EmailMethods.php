@@ -76,7 +76,7 @@
                                                     padding-bottom: 30px;
                                                 '
                                             >
-                                                您登录帐户 <a
+                                                您的帐户 <a
                                                     href='mailto:{$userEmail}'
                                                     rel='noopener'
                                                     target='_blank'
@@ -148,12 +148,12 @@
                                                     padding-bottom: 30px;
                                                 '
                                             >
-                                                您会收到这封自动产生的邮件，是由于有人试图通过网页或移动设备登录您的帐户，且提供了正确的帐户名称与密码。<br /><br />
+                                                您会收到这封自动产生的邮件，是由于有人试图通过网页或移动设备操作您的帐户，且提供了正确的帐户名称与密码。<br /><br />
                                                 待办事项网站的验证码是完成指定操作所必需的。<span
                                                     style='color: #ffffff; font-weight: bold'
                                                     >没有人能够不访问这封电子邮件就访问您的帐户。</span
                                                 ><br /><br />
-                                                <span style='color: #ffffff; font-weight: bold'>如果您未曾尝试登录</span
+                                                <span style='color: #ffffff; font-weight: bold'>如果您未曾尝试操作</span
                                                 >，那么请更改您的 待办事项网站
                                                 密码，并考虑更改您的电子邮件密码，以确保您的帐户安全。
                                             </td>
