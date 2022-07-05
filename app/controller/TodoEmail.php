@@ -4,6 +4,7 @@
     
     // 引入有关邮箱的依赖，打开CMD，在项目根目录下执行“composer require phpmailer/phpmailer”命令
     // 注意！在服务器端要单独使用composer的命令安装
+    use app\model\TodoListUser;
     use app\tools\EmailMethods;
     use PHPMailer\PHPMailer\Exception;
     use PHPMailer\PHPMailer\PHPMailer;
@@ -72,7 +73,7 @@
             if ($res) {
                 return '验证码已发送到您的邮箱！';
             } else {
-                return '验证码获取失败';
+                return '验证码获取失败···';
             }
         }
         
@@ -85,6 +86,15 @@
             $message = json_decode(file_get_contents("php://input"), true);
             $userEmail = json_decode(sprintf('"%s"', $message['email']));
             $verificationCode = json_decode(sprintf('"%s"', $message['verificationCode']));
+    
+            // 返回的值：
+            $response = [];
+            // 如果已存在此用户
+            if (TodoListUser::where("name", $userEmail)->find() !== null) {
+                // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
+                exit($response['message'] = "已存在此用户，请更换邮箱地址！");
+            }
+            
             try {
                 echo $this->sendEmail([
                     // QQ邮箱的服务器，这里是服务器用的
@@ -98,7 +108,7 @@
                     // 发件人
                     'setFrom' => ['2690085099@qq.com', '元昱'],
                     // 收件人的邮箱，这是用户的邮箱，用户要注册
-                    'addAddress' => [$userEmail, '元昱'],           //收件人
+                    'addAddress' => [$userEmail, '元昱'],
                     // 回复的时候回复给哪个邮箱 建议和发件人一致
                     'addReplyTo' => ['2690085099@qq.com', '元昱'],
                     // 抄送（在发送邮件时，将内容同时发送给其他人联系人，其他人能够看到被CC的成员）
@@ -108,13 +118,13 @@
                     // 添加附件
                     'addAttachment' => '',
                     // 邮件标题
-                    'Subject' => '待办事项网站 客服',
+                    'Subject' => '待办事项网站的客服',
                     // 邮件内容（如果要在字符串里嵌入变量，要用双引号""来包裹，而不是单引号''）
-//                    'Body' => "<h1>这里是邮件内容</h1><p>您的验证码为：$verificationCode</p>",
                     'Body' => $emailMethods->getHtmlEmail($userEmail,$verificationCode),
                     // 如果邮件客户端不支持HTML则显示此内容
                     'AltBody' => "待办事项客服：尊敬的{$userEmail}客户，您好！您的验证码为：{$verificationCode}",
                 ]);
+//                exit($response['message'] = "已存在此用户，请更换邮箱地址！");
             } catch (Exception $e) {
                 exit($e);
             }
