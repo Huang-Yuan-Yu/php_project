@@ -1,4 +1,4 @@
-ThinkPHP 6.0
+待办事项后端框架——ThinkPHP 6.0
 ===============
 [![OSCS Status](https://www.oscs1024.com/platform/badge/2690085099/php_project.svg?size=small)](https://www.oscs1024.com/project/2690085099/php_project?ref=badge_small)
 > 运行环境要求PHP7.2+，兼容PHP8.1
@@ -6,6 +6,17 @@ ThinkPHP 6.0
 [官方应用服务市场](https://market.topthink.com) | [`ThinkAPI`——官方统一API服务](https://docs.topthink.com/think-api)
 
 ThinkPHPV6.0版本由[亿速云](https://www.yisu.com/)独家赞助发布。
+
+## 地址：
+
+| 内容   |                                    在线地址                                            |  上线日期  |
+| :----------- | :------------------------------------------------------------------------ | :----------: |
+| 待办事项前端   | [https://www.hyy666.top](https://www.hyy666.top) | 2022-05-29 |
+| 待办事项后端 | [https://thinkphp.hyy666.top](https://thinkphp.hyy666.top) | 2022-05-29 |
+| B站解说视频 | [https://www.bilibili.com/video/BV12S4y1i7Wg](https://www.bilibili.com/video/BV12S4y1i7Wg) | 2022-06-27 |
+| A站解说视频 | [https://www.acfun.cn/v/ac35445891](https://www.acfun.cn/v/ac35445891) | 2022-06-27 |
+| 后端GitHub地址 | [https://github.com/2690085099/php_project](https://github.com/2690085099/php_project) | 2022-07-03 |
+| 后端Gitee地址 | [https://gitee.com/HYY2690085099/php_project](https://gitee.com/HYY2690085099/php_project) | 2022-07-07 |
 
 ## 主要新特性
 
