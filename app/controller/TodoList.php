@@ -88,6 +88,8 @@
                         $jwt = JWT::encode($token, KEY, "HS256");
                         // 登录成功就赋值为success
                         $response['result'] = '登录成功';
+                        // 用户头像数据
+                        $response['userAvatarData'] = $query[0]->avatar;
                         // 将编码后的Token发送给客户端
                         $response['jwt'] = $jwt;
                     }
@@ -105,16 +107,23 @@
          */
         public function verification()
         {
+            $user = json_decode(file_get_contents("php://input"), true);
+            $name = json_decode(sprintf('"%s"', $user['name']));
+            $avatar = TodoListUser::where("name", $name)->value("avatar");
+            
             try {
-                // 注意！！！这里能获取客户端的HTTP请求头的某个字段，比如“TOKEN”，注意要大写（否则会报500错,即使客户端传的token名称是小写）
-                // 前缀固定为”HTTP-“，后面为具体的字段名。HS256方式，这里要和签发的时候对应
+                /*注意！！！这里能获取客户端的HTTP请求头的某个字段，比如“TOKEN”
+                注意要大写（否则会报“500”错,即使客户端传的token名称是小写）
+                前缀固定为”HTTP-“，后面为具体的字段名。HS256方式，这里要和签发的时候对应*/
                 $decoded = JWT::decode($_SERVER['HTTP_TOKEN'], new Key(KEY, "HS256"));
                 $arr = $decoded;
                 if (time() > $arr->exp) {
                     $response["message"] = "登录已过期，请重新登录！";
                 } else {
-                    $response["message"] = "处于登录状态";
+                    // 返回用户头像数据
+                    $response["avatar"] = $avatar;
                 }
+                exit(json_encode($response));
             } catch (SignatureInvalidException $e) {  //签名不正确
                 // exit()表示执行此代码后，跳出函数，不执行其他函数中的其他代码，包括其他函数的代码
                 exit($e->getMessage());
@@ -288,6 +297,34 @@
             } catch (PDOException $exception) {
                 exit($response["message"] = "密码重置失败···");
             }
+        }
+        
+        /**
+         * 用户上传头像的方法
+         */
+        public function uploadAvatar()
+        {
+            try {
+                $message = json_decode(file_get_contents("php://input"), true);
+                $userName = json_decode(sprintf('"%s"', $message['userName']));
+                TodoListUser::where("name", $userName)->save(
+                    [
+                        // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
+                        "avatar" => json_decode(sprintf('"%s"', $message['base64'])),
+                    ]
+                );
+                exit("头像设置成功！");
+            } catch (Exception $exception) {
+                exit($exception);
+            }
+        }
+    
+        /**
+         * 从服务器获取时间戳
+         */
+        public function getDate()
+        {
+            echo(time());
         }
         
         /**
