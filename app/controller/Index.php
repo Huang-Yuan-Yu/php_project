@@ -24,8 +24,10 @@
             return 'studentGet：我叫' . $name . "，今年" . $age . "岁了！";
         }
         
-        public function studentPost($name = '黄YY', $age = 21)
+        public function qq()
         {
-            return 'POST：我叫' . $name . "，今年" . $age . "岁了！";
+            // 这样写确实能够访问到，在public目录下
+            return "<a href='/static/qq/index.php'>进入QQ配置</a>";
+//            return "<a href='/static/qq/example/oauth/index.php'>进入配置教程</a>";
         }
     }

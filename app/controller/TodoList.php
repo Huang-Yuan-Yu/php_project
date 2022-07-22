@@ -11,6 +11,7 @@
     use Firebase\JWT\JWT;
     use Firebase\JWT\Key;
     use Firebase\JWT\SignatureInvalidException;
+    use QC;
     use think\db\exception\PDOException;
     use think\Exception;
     
@@ -46,6 +47,59 @@
             } catch (PDOException $exception) {
                 exit($response["message"] = "用户名重复，请更换用户名！");
             }
+        }
+        
+        /**
+         * 游客登录要用到的匿名注册和顺便登录的接口
+         */
+        public function loginAnonymously()
+        {
+            try {
+                // 返回的值：
+                $response = [];
+                $user = json_decode(file_get_contents("php://input"), true);
+                $name = json_decode(sprintf('"%s"', $user['name']));
+                
+                // 判断是否存在此用户，如果不存在，则开始注册，否则就不用注册
+                if (TodoListUser::where("name", $name)->find() === null) {
+                    // 添加数据到学生表中：
+                    TodoListUser::create(
+                        [
+                            "name" => $name,
+                        ]
+                    );
+                }
+                // 查询游客的信息（一定要在判断用户之后查询，如果查询不到信息会报错
+                $query = TodoListUser::where("name", $name)->select();
+                // 获取当前时间，作为Token签发时间
+                $nowTime = time();
+                // 注意！Token里不能存放重要、敏感的内容，因为可以通过Token解析出下面的实际内容
+                $token = [
+                    // 签发者地址
+                    'iss' => 'http://localhost:8000/',
+                    // 客户端地址
+                    'aud' => 'http://localhost:8080/',
+                    // 签发时间
+                    'iat' => $nowTime,
+                    // 在什么时间之后该jwt才可用
+                    'nbf' => $nowTime,
+                    // 过期时间，这里以“秒”作为单位，“+600”表示过10分钟后过期——60*10=600，604800秒等于一个星期
+                    'exp' => $nowTime + 604800,
+                ];
+                // 对Token进行编码，第一个参数为Token，第二个参数为加密公钥
+                // 将编码后的Token发送给客户端
+                $response['jwt'] = JWT::encode($token, KEY, "HS256");
+                // 用户头像数据
+                $response['avatar'] = $query[0]->avatar;
+                // 登录成功就赋值为success
+                $response['result'] = '登录成功';
+            } catch (PDOException $exception) {
+                // 一般是浏览器指纹（name）重复了
+                exit($response["result"] = "抱歉，您的设备不支持游客登录···");
+            }
+            
+            // 最后返回一或多个属性
+            exit(json_encode($response));
         }
         
         /**
@@ -85,13 +139,13 @@
                             'exp' => $nowTime + 604800,
                         ];
                         // 对Token进行编码，第一个参数为Token，第二个参数为加密公钥
-                        $jwt = JWT::encode($token, KEY, "HS256");
+                        // 将编码后的Token发送给客户端
+                        $response['jwt'] = JWT::encode($token, KEY, "HS256");
                         // 登录成功就赋值为success
                         $response['result'] = '登录成功';
                         // 用户头像数据
                         $response['userAvatarData'] = $query[0]->avatar;
-                        // 将编码后的Token发送给客户端
-                        $response['jwt'] = $jwt;
+                        
                     }
                 } catch (Exception $exception) {
                     $response['msg'] = '用户名或密码错误!';
@@ -318,13 +372,33 @@
                 exit($exception);
             }
         }
-    
+        
         /**
          * 从服务器获取时间戳
          */
         public function getDate()
         {
             echo(time());
+        }
+        
+        /**
+         * 用于QQ第三方登录的回调接口
+         */
+        public function qqCallback()
+        {
+            //修改文件路径
+            require_once("./static/qq/API/qqConnectAPI.php");
+            $qc = new QC();
+            //回调函数
+            $Callback = $qc->qq_callback();
+            //唯一标识
+            $QqId = $qc->get_openid();
+            //重新实例化QC
+            $qc = new QC($Callback, $QqId);
+            //我们配置时候选的get_user_info
+            $result = $qc->get_user_info();
+            //打印出详细的信息
+            dump($result);
         }
         
         /**
