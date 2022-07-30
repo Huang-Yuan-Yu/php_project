@@ -11,7 +11,6 @@
     use Firebase\JWT\JWT;
     use Firebase\JWT\Key;
     use Firebase\JWT\SignatureInvalidException;
-    use QC;
     use think\db\exception\PDOException;
     use think\Exception;
     
@@ -24,6 +23,7 @@
     
     class TodoList
     {
+        
         /**
          * 注册
          */
@@ -35,7 +35,7 @@
                 // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
                 // 注意！POST里存储的数据是Unicode编码，需要转码才能用
                 $user = json_decode(file_get_contents("php://input"), true);
-                // 添加数据到学生表中：
+                // 添加数据到用户表中：
                 TodoListUser::create(
                     [
                         // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
@@ -61,8 +61,9 @@
                 $name = json_decode(sprintf('"%s"', $user['name']));
                 
                 // 判断是否存在此用户，如果不存在，则开始注册，否则就不用注册
-                if (TodoListUser::where("name", $name)->find() === null) {
-                    // 添加数据到学生表中：
+                $todoListUser = new TodoListUser();
+                if ($todoListUser->where("name", $name)->find() === null) {
+                    // 添加数据到用户表中：
                     TodoListUser::create(
                         [
                             "name" => $name,
@@ -70,7 +71,7 @@
                     );
                 }
                 // 查询游客的信息（一定要在判断用户之后查询，如果查询不到信息会报错
-                $query = TodoListUser::where("name", $name)->select();
+                $query = $todoListUser->where("name", $name)->select();
                 // 获取当前时间，作为Token签发时间
                 $nowTime = time();
                 // 注意！Token里不能存放重要、敏感的内容，因为可以通过Token解析出下面的实际内容
@@ -103,6 +104,28 @@
         }
         
         /**
+         * QQ授权后，将信息存储到后端
+         */
+        public function qqLogin()
+        {
+            $user = json_decode(file_get_contents("php://input"), true);
+            $name = json_decode(sprintf('"%s"', $user['name']));
+            
+            // 判断是否存在此用户，如果不存在，则开始注册，否则就不用注册
+            $todoListUser = new TodoListUser();
+            if ($todoListUser->where("name", $name)->find() === null) {
+                // 添加数据到用户表中：
+                TodoListUser::create(
+                    [
+                        "name" => $name,
+                        // 头像
+                        "avatar" => json_decode(sprintf('"%s"', $user['avatar'])),
+                    ]
+                );
+            }
+        }
+        
+        /**
          * 用户登录的方法
          */
         public function login()
@@ -114,13 +137,14 @@
             // 这里只是为了占位，因为返回给前端的参数可能有多个：
             $response['result'] = "";
             // 判断是否存在此用户，如果不存在，则直接返回信息给前端
-            if (TodoListUser::where("name", $name)->find() === null) {
+            $todoListUser = new TodoListUser();
+            if ($todoListUser->where("name", $name)->find() === null) {
                 // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
                 $response['result'] = "不存在此用户，请检查账号是否输入正确！";
             } else {
                 try {
                     // 查询数据库的表（两个查询条件），查找有无存在此用户，若查询不到，则会报错，要异常捕获
-                    $query = TodoListUser::where("name", $name)->where("password", $password)->select();
+                    $query = $todoListUser->where("name", $name)->where("password", $password)->select();
                     // 用户名和密码正确，则签发Token
                     if ($name == $query[0]->name && $password == $query[0]->password) {
                         // 获取当前时间，作为签发时间
@@ -146,7 +170,6 @@
                         $response['result'] = '登录成功';
                         // 用户头像数据
                         $response['userAvatarData'] = $query[0]->avatar;
-                        
                     }
                 } catch (Exception $exception) {
                     $response['msg'] = '用户名或密码错误!';
@@ -162,9 +185,10 @@
          */
         public function verification()
         {
+            $todoListUser = new TodoListUser();
             $user = json_decode(file_get_contents("php://input"), true);
             $name = json_decode(sprintf('"%s"', $user['name']));
-            $avatar = TodoListUser::where("name", $name)->value("avatar");
+            $avatar = $todoListUser->where("name", $name)->value("avatar");
             
             try {
                 /*注意！！！这里能获取客户端的HTTP请求头的某个字段，比如“TOKEN”
@@ -202,7 +226,8 @@
         {
             $user = json_decode(file_get_contents("php://input"), true);
             // 在数据表中查找用户的数据：
-            $query = TodoListData::
+            $todoListData = new TodoListData();
+            $query = $todoListData->
             // 查询某个用户的所有待办事项记录
             where("name", json_decode(sprintf('"%s"', $user['name'])))
                 ->select();
@@ -218,7 +243,7 @@
             // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
             // 注意！POST里存储的数据是Unicode编码，需要转码才能用
             $data = json_decode(file_get_contents("php://input"), true);
-            // 添加数据到学生表中：
+            // 添加数据到用户表中：
             TodoListData::create(
                 [
                     // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
@@ -228,7 +253,8 @@
                 ]
             );
             
-            $query = TodoListData::where("name", json_decode(sprintf('"%s"', $data['name'])))
+            $todoListData = new TodoListData();
+            $query = $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
                 ->value("time");
             exit(json_encode($query));
         }
@@ -238,11 +264,12 @@
          */
         public function deleteData()
         {
+            $todoListData = new TodoListData();
             // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
             // 注意！POST里存储的数据是Unicode编码，需要转码才能用
             $data = json_decode(file_get_contents("php://input"), true);
             // 删除指定用户的指定记录，使用两个条件，从而不会删错用户的信息
-            TodoListData::where("name", json_decode(sprintf('"%s"', $data['name'])))
+            $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
                 ->where("mission", json_decode(sprintf('"%s"', $data['mission'])))
                 ->delete();
         }
@@ -262,16 +289,17 @@
          */
         public function modificationData()
         {
+            $todoListData = new TodoListData();
             $data = json_decode(file_get_contents("php://input"), true);
             // 如果$user['beforeContent']已经存在，证明调用者发的是修改事项内容的请求（isset()检测变量是否已设置且不为null
             if (isset($data['beforeContent'])) {
-                TodoListData::where("name", json_decode(sprintf('"%s"', $data['name'])))
+                $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
                     ->where("mission", json_decode(sprintf('"%s"', $data['beforeContent'])))
                     ->update(["mission" => json_decode(sprintf('"%s"', $data['mission']))]);
             } // 如果是修改事项的完成情况：
             else if (isset($data['nowDone'])) {
                 // 以用户名和记录内容作为条件查询，用户名和记录都不会出现重复的情况，因为在前端和后端都已做判断
-                TodoListData::where("name", json_decode(sprintf('"%s"', $data['name'])))
+                $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
                     ->where("mission", json_decode(sprintf('"%s"', $data['mission'])))
                     ->update(["done" => json_decode(sprintf('"%s"', $data['nowDone']))]);
             }
@@ -282,8 +310,9 @@
          */
         public function finishAllTodo()
         {
+            $todoListData = new TodoListData();
             $data = json_decode(file_get_contents("php://input"), true);
-            TodoListData::where("name", json_decode(sprintf('"%s"', $data['name'])))
+            $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
                 // 查找该用户下的所有未完成的事项，将其更新为完成
                 ->where("done", 0)->update(["done" => 1]);
         }
@@ -293,8 +322,9 @@
          */
         public function noFinishAllTodo()
         {
+            $todoListData = new TodoListData();
             $data = json_decode(file_get_contents("php://input"), true);
-            TodoListData::where("name", json_decode(sprintf('"%s"', $data['name'])))
+            $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
                 // 查找该用户下的所有完成的事项，将其更新为未完成
                 ->where("done", 1)->update(["done" => 0]);
         }
@@ -304,13 +334,14 @@
          */
         public function updateLoginTime()
         {
+            $todoListUser = new TodoListUser();
             $response = [];
             $user = json_decode(file_get_contents("php://input"), true);
             $userName = json_decode(sprintf('"%s"', $user['name']));
             // 查询用户上次登录的时间
-            $query = TodoListUser::where("name", $userName)->value("login_time");
+            $query = $todoListUser->where("name", $userName)->value("login_time");
             // 更新为当前时间
-            TodoListUser::where("name", $userName)->update(["login_time" => date('Y-m-d H:i:s')]);
+            $todoListUser->where("name", $userName)->update(["login_time" => date('Y-m-d H:i:s')]);
             // 装填结果
             $response["上次登录时间"] = $query;
             $response["本次登录时间"] = date('Y-m-d H:i:s');
@@ -324,6 +355,7 @@
         public function resetPassword()
         {
             try {
+                $todoListUser = new TodoListUser();
                 // 返回的值：
                 $response = [];
                 // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
@@ -333,12 +365,12 @@
                 $userPassword = json_decode(sprintf('"%s"', $user['password']));
                 
                 // 如果不存在此用户
-                if (TodoListUser::where("name", $userName)->find() === null) {
+                if ($todoListUser->where("name", $userName)->find() === null) {
                     // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
                     exit($response['message'] = "不存在此用户，请检查账号是否输入正确！");
                 }
                 // 查询结果，返回一个数组，如果里面有对象则存在此用户，为空数组则不存在
-                $query = TodoListUser::where("name", $userName)->select();
+                $query = $todoListUser->where("name", $userName)->select();
                 
                 // 先查询用户原来的密码，看新密码和旧密码是否一致，一致则提示不必修改
                 if ($query[0]->password === $userPassword) {
@@ -346,7 +378,7 @@
                 } // 如果不一样
                 else {
                     // 则查找用户并更新用户的密码
-                    TodoListUser::where("name", $userName)->update(["password" => $userPassword]);
+                    $todoListUser->where("name", $userName)->update(["password" => $userPassword]);
                     exit($response["message"] = "密码重置成功！");
                 }
             } catch (PDOException $exception) {
@@ -359,19 +391,16 @@
          */
         public function uploadAvatar()
         {
-            try {
-                $message = json_decode(file_get_contents("php://input"), true);
-                $userName = json_decode(sprintf('"%s"', $message['userName']));
-                TodoListUser::where("name", $userName)->save(
-                    [
-                        // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
-                        "avatar" => json_decode(sprintf('"%s"', $message['base64'])),
-                    ]
-                );
-                exit("头像设置成功！");
-            } catch (Exception $exception) {
-                exit($exception);
-            }
+            $todoListUser = new TodoListUser();
+            $message = json_decode(file_get_contents("php://input"), true);
+            $userName = json_decode(sprintf('"%s"', $message['userName']));
+            $todoListUser->where("name", $userName)->save(
+                [
+                    // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
+                    "avatar" => json_decode(sprintf('"%s"', $message['base64'])),
+                ]
+            );
+            exit("头像设置成功！");
         }
         
         /**
@@ -380,26 +409,6 @@
         public function getDate()
         {
             echo(time());
-        }
-        
-        /**
-         * 用于QQ第三方登录的回调接口
-         */
-        public function qqCallback()
-        {
-            //修改文件路径
-            require_once("./static/qq/API/qqConnectAPI.php");
-            $qc = new QC();
-            //回调函数
-            $Callback = $qc->qq_callback();
-            //唯一标识
-            $QqId = $qc->get_openid();
-            //重新实例化QC
-            $qc = new QC($Callback, $QqId);
-            //我们配置时候选的get_user_info
-            $result = $qc->get_user_info();
-            //打印出详细的信息
-            dump($result);
         }
         
         /**
