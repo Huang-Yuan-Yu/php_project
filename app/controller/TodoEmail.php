@@ -21,19 +21,19 @@
          * @throws Exception
          */
         function sendEmail(array $content = [
-            'Host' => '',                 //服务器
-            'Port' => '',                 //端口
-            'Username' => '',             //邮箱的用户名
-            'Password' => '',             //邮箱授权码（需要申请）
-            'setFrom' => [],              //发件人
-            'addAddress' => [],           //收件人
-            'addReplyTo' => [],           //回复的时候回复给哪个邮箱 建议和发件人一致
-            'addCC' => [],                //抄送
-            'addBCC' => [],               //密送
-            'addAttachment' => '',        //添加附件
-            'Subject' => '',              //邮件标题
-            'Body' => '',                 //邮件内容
-            'AltBody' => '',              //如果邮件客户端不支持HTML则显示此内容
+            'Host' => '',                 // 服务器
+            'Port' => '',                 // 端口
+            'Username' => '',             // 邮箱的用户名
+            'Password' => '',             // 邮箱授权码（需要申请）
+            'setFrom' => [],              // 发件人
+            'addAddress' => [],           // 收件人
+            'addReplyTo' => [],           // 回复的时候回复给哪个邮箱 建议和发件人一致
+            'addCC' => [],                // 抄送
+            'addBCC' => [],               // 密送
+            'addAttachment' => '',        // 添加附件
+            'Subject' => '',              // 邮件标题
+            'Body' => '',                 // 邮件内容
+            'AltBody' => '',              // 如果邮件客户端不支持HTML则显示此内容
         ]): string
         {
             // 创建对象

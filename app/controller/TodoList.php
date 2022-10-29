@@ -32,7 +32,7 @@
             try {
                 // 返回的值：
                 $response = [];
-                // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
+                // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码转换为JSON格式
                 // 注意！POST里存储的数据是Unicode编码，需要转码才能用
                 $user = json_decode(file_get_contents("php://input"), true);
                 // 添加数据到用户表中：
