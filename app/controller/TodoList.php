@@ -38,7 +38,7 @@
                 // 添加数据到用户表中：
                 TodoListUser::create(
                     [
-                        // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
+                        // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON解码：
                         "name" => json_decode(sprintf('"%s"', $user['name'])),
                         "password" => json_decode(sprintf('"%s"', $user['password'])),
                     ]
