@@ -243,7 +243,7 @@
             // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
             // 注意！POST里存储的数据是Unicode编码，需要转码才能用
             $data = json_decode(file_get_contents("php://input"), true);
-            // 添加数据到用户表中：
+            // 添加数据到待办事项表中：
             TodoListData::create(
                 [
                     // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
