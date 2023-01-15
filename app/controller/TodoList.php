@@ -185,7 +185,20 @@
                         ];
                         // 对Token进行编码，第一个参数为Token，第二个参数为加密公钥
                         // 将编码后的Token发送给客户端
-                        $response['jwt'] = JWT::encode($token, KEY, "HS256");
+                        //$response['jwt'] = JWT::encode($token, KEY, "HS256");
+                        $redis = Cache::store('redis');
+                        // 判断是否存在缓存
+                        if ($redis->get('Token字符串')) {
+                            // 获取缓存并赋值
+                            $response['jwt'] = $redis->get('Token字符串');
+                        }
+                        // 如果没有缓存
+                        else{
+                            $tokenString = JWT::encode($token, KEY, "HS256");
+                            // 设置缓存
+                            $redis->set('Token字符串', $tokenString);
+                            $response['jwt'] = $tokenString;
+                        }
                         // 登录成功就赋值为success
                         $response['result'] = '登录成功';
                         // 用户头像数据
@@ -245,24 +258,12 @@
         public function getObjectArray()
         {
             $user = json_decode(file_get_contents("php://input"), true);
-    
-            $redis = Cache::store('redis');
-            // 判断是否存在缓存
-            if ($redis->get('事项记录')) {
-                // 获取缓存并赋值
-                $query = $redis->get('事项记录');
-            }
-            // 如果没有缓存
-            else{
-                // 在数据表中查找用户的数据：
-                $todoListData = new TodoListData();
-                $query = $todoListData->
-                // 查询某个用户的所有待办事项记录
-                where("name", json_decode(sprintf('"%s"', $user['name'])))
-                    ->select();
-                $redis->set("事项记录", $query);
-            }
-            
+            // 在数据表中查找用户的数据：
+            $todoListData = new TodoListData();
+            $query = $todoListData->
+            // 查询某个用户的所有待办事项记录
+            where("name", json_decode(sprintf('"%s"', $user['name'])))
+                ->select();
             // 返回查询的结果
             exit(json_encode($query));
         }
@@ -338,7 +339,7 @@
         }
         
         /**
-         * 完成所有发的待办事项
+         * 完成所有的待办事项
          */
         public function finishAllTodo()
         {
