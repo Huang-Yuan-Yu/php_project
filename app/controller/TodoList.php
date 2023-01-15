@@ -186,7 +186,6 @@
                         ];
                         // 对Token进行编码，第一个参数为Token，第二个参数为加密公钥
                         // 将编码后的Token发送给客户端
-                        //$response['jwt'] = JWT::encode($token, KEY, "HS256");
                         $redis = Cache::store('redis');
                         // 判断是否存在缓存
                         if ($redis->get('Token字符串')) {
@@ -469,7 +468,6 @@
                 // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
                 exit($response['message'] = "已存在此用户，请更换邮箱地址！");
             }
-            
             try {
                 echo $emailMethods->sendEmail([
                     // QQ邮箱的服务器，这里是服务器用的
