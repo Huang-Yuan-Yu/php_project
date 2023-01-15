@@ -2,242 +2,70 @@
     
     namespace app\tools;
     
+    use PHPMailer\PHPMailer\PHPMailer;
+
     class EmailMethods
     {
         /**
-         * 获取电子邮箱用的HTML模板（模板仿制“蒸汽平台（Steam国内代理平台）”的邮箱验证码，并会传入用户特定的信息
-         * 因为将一大串HTML Email写在主类里会显得冗余，所以单独分出来一个类，作为方法调用
-         * @param $userEmail :用户的邮箱
-         * @param $verificationCode :验证码
-         * @return string:邮箱HTML用的
+         * 编写公共的发邮件方法——发送邮件
+         * @param array $content
+         * @return string 返回结果，可能是“成功”或“失败”，由程序自行判断
+         * @throws \PHPMailer\PHPMailer\Exception
          */
-        public function getHtmlEmail($userEmail, $verificationCode)
+        function sendEmail(array $content = [
+            'Host' => '',                 // 服务器
+            'Port' => '',                 // 端口
+            'Username' => '',             // 邮箱的用户名
+            'Password' => '',             // 邮箱授权码（需要申请）
+            'setFrom' => [],              // 发件人
+            'addAddress' => [],           // 收件人
+            'addReplyTo' => [],           // 回复的时候回复给哪个邮箱 建议和发件人一致
+            'addCC' => [],                // 抄送
+            'addBCC' => [],               // 密送
+            'addAttachment' => '',        // 添加附件
+            'Subject' => '',              // 邮件标题
+            'Body' => '',                 // 邮件内容
+            'AltBody' => '',              // 如果邮件客户端不支持HTML则显示此内容
+        ]): string
         {
-            return "<table border='0'>
-        <tr>
-            <td class='p-80 mpy-35 mpx-15' bgcolor='#212429' style='padding: 50px'>
-                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                    <tbody>
-                        <tr>
-                            <td
-                                class='img pb-45'
-                                style='font-size: 0; line-height: 0; text-align: left; padding-bottom: 40px'
-                            >
-                                <a
-                                    href='https://www.hyy666.top/'
-                                    target='_blank'
-                                    rel='noopener'
-                                    style='text-decoration: none'
-                                >
-                                    <h1 style='font-size: 40px; text-align: center; color: white'>待办事项</h1>
-                                </a>
-                            </td>
-                        </tr>
-
-                        <tr>
-                            <td>
-                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                    <tbody>
-                                        <tr>
-                                            <td
-                                                class='title-36 pb-30 c-grey6 fw-b'
-                                                style='
-                                                    font-size: 36px;
-                                                    line-height: 42px;
-                                                    font-family: Arial, sans-serif, Motiva Sans;
-                                                    text-align: left;
-                                                    padding-bottom: 30px;
-                                                    color: #bfbfbf;
-                                                    font-weight: bold;
-                                                '
-                                            >
-                                                <a
-                                                    href='mailto:{$userEmail}'
-                                                    rel='noopener'
-                                                    target='_blank'
-                                                    style='text-decoration: none; color: #bfbfbf'
-                                                    >{$userEmail}</a
-                                                >，您好！
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                    <tbody>
-                                        <tr>
-                                            <td
-                                                class='text-18 c-grey4 pb-30'
-                                                style='
-                                                    font-size: 18px;
-                                                    line-height: 25px;
-                                                    font-family: Arial, sans-serif, Motiva Sans;
-                                                    text-align: left;
-                                                    color: #dbdbdb;
-                                                    padding-bottom: 30px;
-                                                '
-                                            >
-                                                您的帐户 <a
-                                                    href='mailto:{$userEmail}'
-                                                    rel='noopener'
-                                                    target='_blank'
-                                                    style='text-decoration: none; color: #bfbfbf'
-                                                    >{$userEmail}</a
-                                                > 所需的 待办事项网站验证码 为：
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                    <tbody>
-                                        <tr>
-                                            <td class='pb-70 mpb-50' style='padding-bottom: 70px'>
-                                                <table
-                                                    width='100%'
-                                                    border='0'
-                                                    cellspacing='0'
-                                                    cellpadding='0'
-                                                    bgcolor='#17191c'
-                                                >
-                                                    <tbody>
-                                                        <tr>
-                                                            <td class='py-30 px-56' style='padding: 30px 56px'>
-                                                                <table
-                                                                    width='100%'
-                                                                    border='0'
-                                                                    cellspacing='0'
-                                                                    cellpadding='0'
-                                                                >
-                                                                    <tbody>
-                                                                        <tr>
-                                                                            <td
-                                                                                class='title-48 c-blue1 fw-b a-center'
-                                                                                style='
-                                                                                    font-size: 48px;
-                                                                                    line-height: 52px;
-                                                                                    font-family: Arial, sans-serif,
-                                                                                        Motiva Sans;
-                                                                                    color: #3a9aed;
-                                                                                    font-weight: bold;
-                                                                                    text-align: center;
-                                                                                '
-                                                                            >
-                                                                                {$verificationCode}
-                                                                            </td>
-                                                                        </tr>
-                                                                    </tbody>
-                                                                </table>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                    <tbody>
-                                        <tr>
-                                            <td
-                                                class='text-18 c-grey4 pb-30'
-                                                style='
-                                                    font-size: 18px;
-                                                    line-height: 25px;
-                                                    font-family: Arial, sans-serif, Motiva Sans;
-                                                    text-align: left;
-                                                    color: #dbdbdb;
-                                                    padding-bottom: 30px;
-                                                '
-                                            >
-                                                您会收到这封自动产生的邮件，是由于有人试图通过网页或移动设备操作您的帐户，且提供了正确的帐户名称与密码。<br /><br />
-                                                待办事项网站的验证码是完成指定操作所必需的。<span
-                                                    style='color: #ffffff; font-weight: bold'
-                                                    >没有人能够不访问这封电子邮件就访问您的帐户。</span
-                                                ><br /><br />
-                                                <span style='color: #ffffff; font-weight: bold'>如果您未曾尝试操作</span
-                                                >，那么请更改您的 待办事项网站
-                                                密码，并考虑更改您的电子邮件密码，以确保您的帐户安全。
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                    <tbody>
-                                        <tr>
-                                            <td
-                                                class='text-18 c-blue1 pb-40'
-                                                style='
-                                                    font-size: 18px;
-                                                    line-height: 25px;
-                                                    font-family: Arial, sans-serif, Motiva Sans;
-                                                    text-align: left;
-                                                    color: #7abefa;
-                                                    padding-bottom: 40px;
-                                                '
-                                            ></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-
-                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                    <tbody>
-                                        <tr>
-                                            <td class='pt-30' style='padding-top: 30px'>
-                                                <table width='100%' border='0' cellspacing='0' cellpadding='0'>
-                                                    <tbody>
-                                                        <tr>
-                                                            <td
-                                                                class='img'
-                                                                width='3'
-                                                                bgcolor='#3a9aed'
-                                                                style='font-size: 0; line-height: 0; text-align: left'
-                                                            ></td>
-                                                            <td
-                                                                class='img'
-                                                                width='37'
-                                                                style='font-size: 0; line-height: 0; text-align: left'
-                                                            ></td>
-                                                            <td>
-                                                                <table
-                                                                    width='100%'
-                                                                    border='0'
-                                                                    cellspacing='0'
-                                                                    cellpadding='0'
-                                                                >
-                                                                    <tbody>
-                                                                        <tr>
-                                                                            <td
-                                                                                class='text-16 py-20 c-grey4 fallback-font'
-                                                                                style='
-                                                                                    font-size: 16px;
-                                                                                    line-height: 22px;
-                                                                                    font-family: Arial, sans-serif,
-                                                                                        Motiva Sans;
-                                                                                    text-align: left;
-                                                                                    padding-top: 20px;
-                                                                                    padding-bottom: 20px;
-                                                                                    color: #f1f1f1;
-                                                                                '
-                                                                            >
-                                                                                祝您愉快，<br />
-                                                                                黄YY
-                                                                            </td>
-                                                                        </tr>
-                                                                    </tbody>
-                                                                </table>
-                                                            </td>
-                                                        </tr>
-                                                    </tbody>
-                                                </table>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </td>
-        </tr>
-    </table>";
+            // 创建对象
+            $email = new PHPMailer(true);
+            $email->isSMTP();               //使用SMTP协议
+            $email->isHTML(true);           //是否以HTML文档格式发送
+            $email->SMTPAuth = true;        //启用SMTP验证功能
+            $email->SMTPSecure = "ssl";     //加密方式（不要随便改成大写！！！）
+            $email->CharSet = "UTF-8";       //设定邮件编码
+            // $email->SMTPDebug = false;      //设置为 true 可以查看具体的发送日志
+        
+            //获取参数
+            $email->Host = $content['Host'];
+            $email->Port = $content['Port'];
+            $email->Username = $content['Username'];
+            $email->Password = $content['Password'];
+            $email->setFrom($content['setFrom'][0], $content['setFrom'][1]);
+            $email->addAddress($content['addAddress'][0], $content['addAddress'][1]);
+            if (!empty($content['addReplyTo'])) {
+                $email->addReplyTo($content['addReplyTo'][0], $content['addReplyTo'][1]);
+            }
+            if (!empty($content['addCC'])) {
+                $email->addCC($content['addCC'][0], $content['addCC'][1]);
+            }
+            if (!empty($content['addBCC'])) {
+                $email->addBCC($content['addBCC'][0], $content['addBCC'][1]);
+            }
+            if (!empty($content['addAttachment'])) {
+                $email->addAttachment = $content['addAttachment'];
+            }
+            $email->Subject = $content['Subject'];
+            $email->Body = $content['Body'];
+            if (!empty($content['AltBody'])) {
+                $email->AltBody = $content['AltBody'];
+            }
+            $res = $email->send();
+            if ($res) {
+                return '验证码已发送到您的邮箱！';
+            } else {
+                return '验证码获取失败···';
+            }
         }
     }
