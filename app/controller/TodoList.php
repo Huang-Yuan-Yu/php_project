@@ -8,6 +8,7 @@
     
     // 引入有关邮箱的依赖，打开CMD，在项目根目录下执行“composer require phpmailer/phpmailer”命令
     // 注意！在服务器端要单独使用composer的命令安装
+    use app\Request;
     use app\tools\EmailMethods;
     use DomainException;
     use Firebase\JWT\BeforeValidException;
@@ -15,11 +16,17 @@
     use Firebase\JWT\JWT;
     use Firebase\JWT\Key;
     use Firebase\JWT\SignatureInvalidException;
-    use PHPMailer\PHPMailer\PHPMailer;
+    use Psr\SimpleCache\InvalidArgumentException;
+    use think\Console;
+    use think\console\Command;
+    use think\console\Output;
+    use think\db\exception\DataNotFoundException;
+    use think\db\exception\DbException;
+    use think\db\exception\ModelNotFoundException;
     use think\db\exception\PDOException;
     use think\Exception;
-    use think\facade\App;
     use think\facade\Cache;
+    use think\facade\Db;
     use think\facade\View;
     
     // 系统使用北京时间
@@ -27,59 +34,56 @@
     // JSON Web Token的私钥（define()可以定义常量）
     define('KEY', '1gHuiop975cdashyex9Ud23ldsvm2Xq');
     // 包含X-Content-Type-Options，可以防止黑客在浏览器进行MIME类型的嗅探
-    header("X-Content-Type-Options:nosniff");
+    header("X-Content-Type-Options:nosniff;Content-Type:text/json;charset=utf-8");
     
     class TodoList
     {
         
         /**
          * 注册
+         * @param Request $request 传入name和password参数
          */
-        public function register()
+        public function register(Request $request): string
         {
             try {
-                // 返回的值：
-                $response = [];
-                // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码转换为JSON格式
-                // 注意！POST里存储的数据是Unicode编码，需要转码才能用
-                $user = json_decode(file_get_contents("php://input"), true);
                 // 添加数据到用户表中：
                 TodoListUser::create(
                     [
                         // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON解码：
-                        "name" => json_decode(sprintf('"%s"', $user['name'])),
-                        "password" => json_decode(sprintf('"%s"', $user['password'])),
+                        "name" => $request['name'],
+                        "password" => $request['password'],
                     ]
                 );
-                exit($response["message"] = "注册成功！");
+                return "注册成功！";
             } catch (PDOException $exception) {
-                exit($response["message"] = "用户名重复，请更换用户名！");
+                return "用户名重复，请更换用户名！";
             }
         }
-        
+    
         /**
          * 游客登录要用到的匿名注册和顺便登录的接口
+         * @param Request $request 传入用户名
+         * @return array|string
+         * @throws InvalidArgumentException
+         * @throws DataNotFoundException
+         * @throws DbException
+         * @throws ModelNotFoundException
          */
-        public function loginAnonymously()
+        public function loginAnonymously(Request $request)
         {
             try {
-                // 返回的值：
-                $response = [];
-                $user = json_decode(file_get_contents("php://input"), true);
-                $name = json_decode(sprintf('"%s"', $user['name']));
-                
                 // 判断是否存在此用户，如果不存在，则开始注册，否则就不用注册
                 $todoListUser = new TodoListUser();
-                if ($todoListUser->where("name", $name)->find() === null) {
+                if ($todoListUser->where("name", $request['name'])->find() === null) {
                     // 添加数据到用户表中：
                     TodoListUser::create(
                         [
-                            "name" => $name,
+                            "name" => $request['name'],
                         ]
                     );
                 }
                 // 查询游客的信息（一定要在判断用户之后查询，如果查询不到信息会报错
-                $query = $todoListUser->where("name", $name)->select();
+                $query = $todoListUser->where("name", $request['name'])->select();
                 
                 // 获取当前时间，作为Token签发时间
                 $nowTime = time();
@@ -117,30 +121,27 @@
                 $response['result'] = '登录成功';
             } catch (PDOException $exception) {
                 // 一般是浏览器指纹（name）重复了
-                exit($response["result"] = "抱歉，您的设备不支持游客登录···");
+                return "抱歉，您的设备不支持游客登录···";
             }
             
             // 最后返回一或多个属性
-            exit(json_encode($response));
+            return $response;
         }
         
         /**
          * QQ授权后，将信息存储到后端
          */
-        public function qqLogin()
+        public function qqLogin(Request $request)
         {
-            $user = json_decode(file_get_contents("php://input"), true);
-            $name = json_decode(sprintf('"%s"', $user['name']));
-            
             // 判断是否存在此用户，如果不存在，则开始注册，否则就不用注册
             $todoListUser = new TodoListUser();
-            if ($todoListUser->where("name", $name)->find() === null) {
+            if ($todoListUser->where("name", $request['name'])->find() === null) {
                 // 添加数据到用户表中：
                 TodoListUser::create(
                     [
-                        "name" => $name,
+                        "name" => $request['name'],
                         // 头像
-                        "avatar" => json_decode(sprintf('"%s"', $user['avatar'])),
+                        "avatar" => $request['avatar'],
                     ]
                 );
             }
@@ -149,25 +150,18 @@
         /**
          * 用户登录的方法
          */
-        public function login()
+        public function login(Request $request)
         {
-            $user = json_decode(file_get_contents("php://input"), true);
-            $name = json_decode(sprintf('"%s"', $user['name']));
-            $password = json_decode(sprintf('"%s"', $user['password']));
-            
-            // 这里只是为了占位，因为返回给前端的参数可能有多个：
-            $response['result'] = "";
             // 判断是否存在此用户，如果不存在，则直接返回信息给前端
             $todoListUser = new TodoListUser();
-            if ($todoListUser->where("name", $name)->find() === null) {
-                // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
+            if ($todoListUser->where("name", $request['name'])->find() === null) {
                 $response['result'] = "不存在此用户，请检查账号是否输入正确！";
             } else {
                 try {
                     // 查询数据库的表（两个查询条件），查找有无存在此用户，若查询不到，则会报错，要异常捕获
-                    $query = $todoListUser->where("name", $name)->where("password", $password)->select();
+                    $query = $todoListUser->where("name", $request['name'])->where("password", $request['password'])->select();
                     // 用户名和密码正确，则签发Token
-                    if ($name == $query[0]->name && $password == $query[0]->password) {
+                    if ($request['name'] == $query[0]->name && $request['password'] == $query[0]->password) {
                         // 获取当前时间，作为签发时间
                         $nowTime = time();
                         // 注意！Token里不能存放重要、敏感的内容，因为可以通过Token解析出下面的实际内容
@@ -209,19 +203,16 @@
             }
             
             // 最后返回一或多个属性
-            exit(json_encode($response));
+            return $response;
         }
         
         /**
          * 验证Token
          */
-        public function verification()
+        public function verification(Request $request)
         {
             $todoListUser = new TodoListUser();
-            $user = json_decode(file_get_contents("php://input"), true);
-            $name = json_decode(sprintf('"%s"', $user['name']));
-            $avatar = $todoListUser->where("name", $name)->value("avatar");
-            
+            $avatar = $todoListUser->where("name", $request['name'])->value("avatar");
             try {
                 /*注意！！！这里能获取客户端的HTTP请求头的某个字段，比如“TOKEN”
                 注意要大写（否则会报“500”错,即使客户端传的token名称是小写）
@@ -234,7 +225,7 @@
                     // 返回用户头像数据
                     $response["avatar"] = $avatar;
                 }
-                exit(json_encode($response));
+                return $response;
             } catch (SignatureInvalidException $e) {  //签名不正确
                 // exit()表示执行此代码后，跳出函数，不执行其他函数中的其他代码，包括其他函数的代码
                 exit($e->getMessage());
@@ -254,97 +245,88 @@
         /**
          * 获取数据，在PHP中，使用关联数组、然后进行JSON编码，就构成了JSON格式的数据
          */
-        public function getObjectArray()
+        public function getObjectArray(Request $request)
         {
-            $user = json_decode(file_get_contents("php://input"), true);
             // 在数据表中查找用户的数据：
             $todoListData = new TodoListData();
             $query = $todoListData->
             // 查询某个用户的所有待办事项记录
-            where("name", json_decode(sprintf('"%s"', $user['name'])))
+            where("name", $request['name'])
                 ->select();
             // 返回查询的结果
-            exit(json_encode($query));
+            return $query;
         }
         
         /**
          * 添加事项
          */
-        public function addData()
+        public function addData(Request $request)
         {
-            // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
-            // 注意！POST里存储的数据是Unicode编码，需要转码才能用
-            $data = json_decode(file_get_contents("php://input"), true);
             // 添加数据到待办事项表中：
             TodoListData::create(
                 [
                     // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
-                    "name" => json_decode(sprintf('"%s"', $data['name'])),
-                    "mission" => json_decode(sprintf('"%s"', $data['mission'])),
-                    "done" => json_decode(sprintf('"%s"', $data['done'])),
+                    "name" => $request['name'],
+                    "mission" => $request['mission'],
+                    "done" => $request['done'],
                 ]
             );
-            
             $todoListData = new TodoListData();
-            $query = $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
-                ->value("time");
-            exit(json_encode($query));
+            $query = $todoListData->where("name", $request['name'])->value("time");
+            return $query;
         }
         
         /**
          * 删除事项
          */
-        public function deleteData()
+        public function deleteData(Request $request)
         {
             $todoListData = new TodoListData();
-            // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
-            // 注意！POST里存储的数据是Unicode编码，需要转码才能用
-            $data = json_decode(file_get_contents("php://input"), true);
             // 删除指定用户的指定记录，使用两个条件，从而不会删错用户的信息
-            $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
-                ->where("mission", json_decode(sprintf('"%s"', $data['mission'])))
-                ->delete();
+            $todoListData->where("name", $request['name'])->where("mission", $request['mission'])->delete();
         }
         
         /**
          * 清除已完成的事项
+         * 之前清除不了事项，因为数据库的id比较乱，所以应该重置id：
+         * alter table 表名 drop column id;
+         * alter table 表名 add id mediumint(8) not null primary key auto_increment first;
          */
         public function clearCompletedTodo()
         {
+            // 如果前端传递的不是JSON，而是数组，则使用如下表达式接收参数
             $data = json_decode(file_get_contents("php://input"), true);
+            // 输出到Command控制台：
+            //error_log(print_r($data, true));
             // “销毁destroy”方法，能够一次性删除多条数据，以主键作为依据，这里可以传入一个数组，里面包含表中主键的值
-            TodoListData::destroy($data);
+            TodoListData::destroy($data,true);
         }
         
         /**
          * 修改事项内容的方法
          */
-        public function modificationData()
+        public function modificationData(Request $request)
         {
             $todoListData = new TodoListData();
-            $data = json_decode(file_get_contents("php://input"), true);
-            // 如果$user['beforeContent']已经存在，证明调用者发的是修改事项内容的请求（isset()检测变量是否已设置且不为null
-            if (isset($data['beforeContent'])) {
-                $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
-                    ->where("mission", json_decode(sprintf('"%s"', $data['beforeContent'])))
-                    ->update(["mission" => json_decode(sprintf('"%s"', $data['mission']))]);
+            // 如果$request['beforeContent']已经存在，证明调用者发的是修改事项内容的请求（isset()检测变量是否已设置且不为null
+            if (isset($request['beforeContent'])) {
+                $todoListData->where("name", $request['name'])->where("mission", $request['beforeContent'])
+                    ->update(["mission" => $request['mission']]);
             } // 如果是修改事项的完成情况：
-            else if (isset($data['nowDone'])) {
+            else if (isset($request['nowDone'])) {
                 // 以用户名和记录内容作为条件查询，用户名和记录都不会出现重复的情况，因为在前端和后端都已做判断
-                $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
-                    ->where("mission", json_decode(sprintf('"%s"', $data['mission'])))
-                    ->update(["done" => json_decode(sprintf('"%s"', $data['nowDone']))]);
+                $todoListData->where("name", $request['name'])->where("mission", $request['mission'])
+                    ->update(["done" => $request['nowDone']]);
             }
         }
         
         /**
          * 完成所有的待办事项
          */
-        public function finishAllTodo()
+        public function finishAllTodo(Request $request)
         {
             $todoListData = new TodoListData();
-            $data = json_decode(file_get_contents("php://input"), true);
-            $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
+            $todoListData->where("name", $request['name'])
                 // 查找该用户下的所有未完成的事项，将其更新为完成
                 ->where("done", 0)->update(["done" => 1]);
         }
@@ -352,11 +334,10 @@
         /**
          * 取消完成所有待办事项
          */
-        public function noFinishAllTodo()
+        public function noFinishAllTodo(Request $request)
         {
             $todoListData = new TodoListData();
-            $data = json_decode(file_get_contents("php://input"), true);
-            $todoListData->where("name", json_decode(sprintf('"%s"', $data['name'])))
+            $todoListData->where("name", $request['name'])
                 // 查找该用户下的所有完成的事项，将其更新为未完成
                 ->where("done", 1)->update(["done" => 0]);
         }
@@ -364,75 +345,62 @@
         /**
          * 返回用户上次登录的时间，以及这次登录时间
          */
-        public function updateLoginTime()
+        public function updateLoginTime(Request $request)
         {
             $todoListUser = new TodoListUser();
-            $response = [];
-            $user = json_decode(file_get_contents("php://input"), true);
-            $userName = json_decode(sprintf('"%s"', $user['name']));
-            // 查询用户上次登录的时间
-            $query = $todoListUser->where("name", $userName)->value("login_time");
+            // 查询用户上次登录的时间（一定要先查询后更新）
+            $query = $todoListUser->where("name", $request['name'])->value("login_time");
             // 更新为当前时间
-            $todoListUser->where("name", $userName)->update(["login_time" => date('Y-m-d H:i:s')]);
+            $todoListUser->where("name", $request['name'])->update(["login_time" => date('Y-m-d H:i:s')]);
             // 装填结果
             $response["上次登录时间"] = $query;
             $response["本次登录时间"] = date('Y-m-d H:i:s');
             // 返回结果（注意！如果要返回一个对象，必须要经过JSON编码后才能传输给前端！）
-            exit(json_encode($response));
+            return $response;
         }
         
         /**
          * 重置密码的方法
          */
-        public function resetPassword()
+        public function resetPassword(Request $request)
         {
             try {
                 $todoListUser = new TodoListUser();
-                // 返回的值：
-                $response = [];
-                // file_get_contents()返回的是字符串！而不是对象，所以使用json_decode解码，转换为“双列数组”，即Java的Map集合，有键值对
-                // 注意！POST里存储的数据是Unicode编码，需要转码才能用
-                $user = json_decode(file_get_contents("php://input"), true);
-                $userName = json_decode(sprintf('"%s"', $user['name']));
-                $userPassword = json_decode(sprintf('"%s"', $user['password']));
-                
                 // 如果不存在此用户
-                if ($todoListUser->where("name", $userName)->find() === null) {
+                if ($todoListUser->where("name", $request['name'])->find() === null) {
                     // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
-                    exit($response['message'] = "不存在此用户，请检查账号是否输入正确！");
+                    return "不存在此用户，请检查账号是否输入正确！";
                 }
                 // 查询结果，返回一个数组，如果里面有对象则存在此用户，为空数组则不存在
-                $query = $todoListUser->where("name", $userName)->select();
+                $query = $todoListUser->where("name", $request['name'])->select();
                 
                 // 先查询用户原来的密码，看新密码和旧密码是否一致，一致则提示不必修改
-                if ($query[0]->password === $userPassword) {
-                    exit($response["message"] = "新密码和旧密码一致，不必修改！");
+                if ($query[0]->password === $request['password']) {
+                    return "新密码和旧密码一致，不必修改！";
                 } // 如果不一样
                 else {
                     // 则查找用户并更新用户的密码
-                    $todoListUser->where("name", $userName)->update(["password" => $userPassword]);
-                    exit($response["message"] = "密码重置成功！");
+                    $todoListUser->where("name", $request['name'])->update(["password" => $request['password']]);
+                    return "密码重置成功！";
                 }
             } catch (PDOException $exception) {
-                exit($response["message"] = "密码重置失败···");
+                return "密码重置失败···";
             }
         }
         
         /**
          * 用户上传头像的方法
          */
-        public function uploadAvatar()
+        public function uploadAvatar(Request $request)
         {
             $todoListUser = new TodoListUser();
-            $message = json_decode(file_get_contents("php://input"), true);
-            $userName = json_decode(sprintf('"%s"', $message['userName']));
-            $todoListUser->where("name", $userName)->save(
+            $todoListUser->where("name", $request['userName'])->save(
                 [
                     // 然后将Unicode编码转换为中文，最后将变量转换为对象，即JSON编码：
-                    "avatar" => json_decode(sprintf('"%s"', $message['base64'])),
+                    "avatar" => $request['base64'],
                 ]
             );
-            exit("头像设置成功！");
+            return "头像设置成功！";
         }
         
         /**
@@ -440,7 +408,7 @@
          */
         public function getDate()
         {
-            echo(time());
+            return time();
         }
         
         /**
@@ -448,62 +416,52 @@
          */
         public function ping()
         {
-            exit("网络正常");
+            return "网络正常";
         }
         
         /**
          * 发送邮件的方法
          */
-        public function postEmail()
+        public function postEmail(Request $request)
         {
             $emailMethods = new EmailMethods();
-            $message = json_decode(file_get_contents("php://input"), true);
-            $userEmail = json_decode(sprintf('"%s"', $message['email']));
-            $verificationCode = json_decode(sprintf('"%s"', $message['verificationCode']));
-            
-            // 返回的值：
-            $response = [];
             // 如果已存在此用户
-            if (TodoListUser::where("name", $userEmail)->find() !== null) {
+            if (TodoListUser::where("name", $request['email'])->find() !== null) {
                 // exit()执行此语句后，直接跳出此函数，不再执行下面的代码
-                exit($response['message'] = "已存在此用户，请更换邮箱地址！");
+                return "已存在此用户，请更换邮箱地址！";
             }
-            try {
-                echo $emailMethods->sendEmail([
-                    // QQ邮箱的服务器，这里是服务器用的
-                    'Host' => 'smtp.qq.com',
-                    // 端口
-                    'Port' => '465',
-                    // 邮箱的用户名
-                    'Username' => '2690085099@qq.com',
-                    // 邮箱授权码（需要申请）
-                    'Password' => 'redxvobeegridffj',
-                    // 发件人
-                    'setFrom' => ['2690085099@qq.com', '元昱'],
-                    // 收件人的邮箱，这是用户的邮箱，用户要注册
-                    'addAddress' => [$userEmail, '元昱'],
-                    // 回复的时候回复给哪个邮箱 建议和发件人一致
-                    'addReplyTo' => ['2690085099@qq.com', '元昱'],
-                    // 抄送（在发送邮件时，将内容同时发送给其他人联系人，其他人能够看到被CC的成员）
-                    'addCC' => [],
-                    // 密送（看不到被BCC的成员）
-                    'addBCC' => [],
-                    // 添加附件
-                    'addAttachment' => '',
-                    // 邮件标题
-                    'Subject' => '待办事项网站的客服',
-                    // 邮件内容
-                    'Body' => View::fetch(
-                        // todolist目录中的email.html文件（充当模板）
-                        "todolist/email",
-                        // 给模板里的变量赋值
-                        ["userEmail" => $userEmail, "verificationCode" => $verificationCode]
-                    ),
-                    // 如果邮件客户端不支持HTML则显示此内容
-                    'AltBody' => "待办事项客服：尊敬的{$userEmail}客户，您好！您的验证码为：{$verificationCode}",
-                ]);
-            } catch (Exception $e) {
-                exit($e);
-            }
+            return $emailMethods->sendEmail([
+                // QQ邮箱的服务器，这里是服务器用的
+                'Host' => 'smtp.qq.com',
+                // 端口
+                'Port' => '465',
+                // 邮箱的用户名
+                'Username' => '2690085099@qq.com',
+                // 邮箱授权码（需要申请）
+                'Password' => 'redxvobeegridffj',
+                // 发件人
+                'setFrom' => ['2690085099@qq.com', '元昱'],
+                // 收件人的邮箱，这是用户的邮箱，用户要注册
+                'addAddress' => [$request['email'], '元昱'],
+                // 回复的时候回复给哪个邮箱 建议和发件人一致
+                'addReplyTo' => ['2690085099@qq.com', '元昱'],
+                // 抄送（在发送邮件时，将内容同时发送给其他人联系人，其他人能够看到被CC的成员）
+                'addCC' => [],
+                // 密送（看不到被BCC的成员）
+                'addBCC' => [],
+                // 添加附件
+                'addAttachment' => '',
+                // 邮件标题
+                'Subject' => '待办事项网站的客服',
+                // 邮件内容
+                'Body' => View::fetch(
+                // todolist目录中的email.html文件（充当模板）
+                    "todolist/email",
+                    // 给模板里的变量赋值
+                    ["userEmail" => $request['email'], "verificationCode" => $request['verificationCode']]
+                ),
+                // 如果邮件客户端不支持HTML则显示此内容
+                'AltBody' => "待办事项客服：尊敬的{$request['email']}客户，您好！您的验证码为：{$request['verificationCode']}",
+            ]);
         }
     }
