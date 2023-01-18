@@ -30,7 +30,7 @@ return [
             'type'     => 'redis',
             'host'     => '127.0.0.1',
             'port'     => '6379',
-            'password' => 'AAAsss12',
+            'password' => '',
             'select'   => '0',
             // 全局缓存有效期（0为永久有效）
             'expire'   => 0,

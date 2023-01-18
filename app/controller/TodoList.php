@@ -59,7 +59,7 @@
                 return "用户名重复，请更换用户名！";
             }
         }
-    
+        
         /**
          * 游客登录要用到的匿名注册和顺便登录的接口
          * @param Request $request 传入用户名
@@ -144,6 +144,12 @@
                         "avatar" => $request['avatar'],
                     ]
                 );
+            }
+            // 如果存在此用户
+            else {
+                // 更新QQ用户的信息到数据库中
+                TodoListUser::where("name", $request['name'])
+                    ->update(["name" => $request['name'], "avatar" => $request['avatar']]);
             }
         }
         
@@ -299,7 +305,7 @@
             // 输出到Command控制台：
             //error_log(print_r($data, true));
             // “销毁destroy”方法，能够一次性删除多条数据，以主键作为依据，这里可以传入一个数组，里面包含表中主键的值
-            TodoListData::destroy($data,true);
+            TodoListData::destroy($data, true);
         }
         
         /**
